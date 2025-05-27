@@ -27,3 +27,46 @@ $log = psql -t -A -F "|" -c $comando
 $executarBloco = $false
 $bloco = @()
 $blocosValidos = @()
+
+foreach ($linha in $log) {
+	$dados = $linha -split '\|'
+	$acao = $dados[1]
+	$id = $dados[2]
+	$nome = $dados[3]
+	$saldo = $dados[4]
+
+	if ($acao -eq "BEGIN") { #Existe um BEGIN
+		# Começa um novo bloco
+		$bloco = @() 
+		$executarBloco = $true
+	}
+	elseif ($acao -eq "END") {
+		# Fecha o bloco e armazena para execução
+		if ($executarBloco -and $bloco.Count -gt 0) {
+			$blocosValidos += ,$bloco
+		}
+		elseif (-not $executarBloco) {
+		Write-Host "⚠️  Encontrado END sem BEGIN. Ignorando bloco."
+	}
+		$executarBloco = $false
+	}
+	elseif ($executarBloco) {
+		# Adiciona ação ao bloco atual
+		$bloco += ,@{
+			acao = $acao
+			id = $id
+			nome = $nome
+			saldo = $saldo
+		}
+		Write-Host " Adicionando $bloco.Length linhas"
+	}
+}
+
+
+# Verifica se há bloco aberto não encerrado e mostra todos os dados
+if ($executarBloco -and $bloco.Count -gt 0) {
+	Write-Host "Bloco com BEGIN no log_id $($bloco[0].log_id) ignorado (sem END)."
+	foreach ($registro in $bloco) {
+		Write-Host "Registro aberto: $($registro.acao) com ID $($registro.id), Nome: $($registro.nome), Saldo: $($registro.saldo)"
+		}
+}
