@@ -70,3 +70,36 @@ if ($executarBloco -and $bloco.Count -gt 0) {
 		Write-Host "Registro aberto: $($registro.acao) com ID $($registro.id), Nome: $($registro.nome), Saldo: $($registro.saldo)"
 		}
 }
+
+# Executa os blocos válidos
+foreach ($bloco in $blocosValidos) {
+	foreach ($registro in $bloco) {
+		$acao = $registro["acao"]
+		$id = $registro["id"]
+		$nome = $registro["nome"]
+		$saldo = $registro["saldo"]
+
+		if ($acao -eq "INSERT") {
+			$comando = "INSERT INTO clientes_em_memoria(id, nome, saldo) VALUES ($id, '$nome', $saldo) ON CONFLICT(id) DO NOTHING;"
+		}
+		elseif ($acao -eq "UPDATE") {
+			$comando = "UPDATE clientes_em_memoria SET nome = '$nome', saldo = $saldo WHERE id = $id;"
+		}
+		elseif ($acao -eq "DELETE") {
+			$comando = "DELETE FROM clientes_em_memoria WHERE id = $id;"
+		}
+		else {
+			continue
+		}
+
+		Write-Host "executado: $comando"
+		psql -c $comando
+	}
+}
+
+# Limpa variáveis de ambiente
+Remove-Item Env:PGHOST
+Remove-Item Env:PGPORT
+Remove-Item Env:PGDATABASE
+Remove-Item Env:PGUSER
+Remove-Item Env:PGPASSWORD
